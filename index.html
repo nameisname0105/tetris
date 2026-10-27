@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="A monochrome, Bugatti-inspired Tetris experience.">
+  <title>BUGATTI — The Grid</title>
+  <style>
+    :root {
+      color-scheme: dark light;
+      --black: #000;
+      --soft: #0d0d0d;
+      --card: #141414;
+      --raised: #1f1f1f;
+      --line: #262626;
+      --line-strong: #3a3a3a;
+      --white: #fff;
+      --body-strong: #e6e6e6;
+      --body: #ccc;
+      --muted: #999;
+      --muted-soft: #666;
+      --display: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+      --text: Georgia, "Times New Roman", serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+    body.light {
+      color-scheme: light;
+      --black: #f4f3ef;
+      --soft: #e9e7e1;
+      --card: #e2dfd8;
+      --raised: #d6d3cc;
+      --line: #d6d3cc;
+      --line-strong: #b9b5ac;
+      --white: #171715;
+      --body-strong: #292825;
+      --body: #494741;
+      --muted: #6d6a62;
+      --muted-soft: #858178;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--black); }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      color: var(--white);
+      background: var(--black);
+      font-family: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+    button { color: inherit; font: inherit; }
+    button:focus-visible { outline: 2px solid var(--white); outline-offset: 4px; }
+    .shell { width: min(1320px, calc(100% - 72px)); margin: 0 auto; }
+    .topbar {
+      height: 72px; display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--line); font-family: var(--mono); text-transform: uppercase;
+    }
+    .wordmark { font: 400 13px/1 var(--display); letter-spacing: .58em; padding-left: .58em; }
+    .top-meta { display: flex; align-items: center; gap: 28px; color: var(--muted); font-size: 9px; letter-spacing: .2em; }
+    .live-mark { display: inline-flex; align-items: center; gap: 9px; color: var(--body); }
+    .live-mark::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #fff; }
+    .theme-button {
+      min-height: 30px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 999px;
+      background: transparent; color: var(--body); font: 8px/1 var(--mono); letter-spacing: .15em;
+      text-transform: uppercase; cursor: pointer;
+    }
+    .theme-button:hover { border-color: var(--white); color: var(--white); }
+    .auth-button { white-space: nowrap; }
+    .auth-dialog {
+      width: min(420px, calc(100% - 28px)); max-width: 420px; padding: 0; color: var(--white);
+      border: 1px solid var(--line-strong); background: var(--black); box-shadow: 0 24px 80px rgb(0 0 0 / 55%);
+    }
+    .auth-dialog::backdrop { background: rgb(0 0 0 / 76%); backdrop-filter: blur(4px); }
+    .auth-content { padding: 28px; }
+    .auth-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 24px; }
+    .auth-heading h2 { margin: 8px 0 0; font: 400 28px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; }
+    .auth-close { width: 32px; height: 32px; border: 1px solid var(--line-strong); border-radius: 50%; background: transparent; cursor: pointer; }
+    .auth-form { display: grid; gap: 14px; }
+    .auth-field { display: grid; gap: 7px; color: var(--muted); font: 9px/1.2 var(--mono); letter-spacing: .15em; text-transform: uppercase; }
+    .auth-field input { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 0; outline: 0; background: var(--soft); color: var(--white); font: 13px var(--text); letter-spacing: normal; text-transform: none; }
+    .auth-field input:focus { border-color: var(--white); }
+    .auth-submit { width: 100%; margin-top: 5px; }
+    .auth-submit:disabled { opacity: .55; cursor: wait; }
+    .auth-message { min-height: 20px; margin: 14px 0 0; color: var(--body); font: 12px/1.5 var(--text); }
+    .auth-message[data-kind="error"] { color: #e79494; }
+    .auth-message[data-kind="success"] { color: #91d5ae; }
+    .auth-links { display: flex; justify-content: space-between; gap: 10px; margin-top: 14px; }
+    .auth-link { padding: 0; border: 0; background: none; color: var(--muted); font: 10px var(--mono); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+    .auth-link:hover { color: var(--white); }
+    .auth-account { padding: 15px; border: 1px solid var(--line); color: var(--body); font: 12px/1.5 var(--text); overflow-wrap: anywhere; }
+    .auth-account p { margin: 0 0 15px; }
+    .auth-setup { margin: 12px 0 0; color: var(--muted); font: 11px/1.6 var(--mono); }
+    [hidden] { display: none !important; }
+    main { padding: 58px 0 34px; }
+    .intro { text-align: center; margin-bottom: 36px; }
+    .eyebrow { color: var(--muted); font: 10px/1.4 var(--mono); letter-spacing: .28em; text-transform: uppercase; }
+    h1 {
+      margin: 14px 0 8px; font: 400 clamp(46px, 7vw, 82px)/.92 var(--display);
+      text-transform: uppercase; letter-spacing: .13em; padding-left: .13em;
+    }
+    .intro p { margin: 14px 0 0; color: var(--muted); font: italic 15px/1.5 var(--text); }
+    .game-layout {
+      display: grid; grid-template-columns: minmax(150px, 1fr) minmax(280px, 340px) minmax(150px, 1fr);
+      gap: clamp(22px, 4vw, 64px); align-items: start; max-width: 980px; margin: 0 auto;
+    }
+    .rail { padding-top: 18px; }
+    .rail-heading, .panel-label {
+      display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px;
+      color: var(--muted); border-bottom: 1px solid var(--line); font: 9px/1.2 var(--mono);
+      letter-spacing: .22em; text-transform: uppercase;
+    }
+    .metric { padding: 20px 0 18px; border-bottom: 1px solid var(--line); }
+    .metric-value { font: 400 clamp(27px, 3vw, 38px)/1 var(--display); letter-spacing: .05em; font-variant-numeric: tabular-nums; }
+    .metric-caption { margin-top: 8px; color: var(--muted); font: 9px/1.4 var(--mono); letter-spacing: .18em; text-transform: uppercase; }
+    .chain-state { margin-top: 7px; color: var(--muted); font: 8px/1.35 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .mini-panel { margin-top: 24px; }
+    .mini-panel canvas { display: block; width: 100%; height: 108px; margin-top: 8px; }
+    .board-column { min-width: 0; }
+    .board-frame { position: relative; padding: 10px; background: var(--soft); border: 1px solid var(--line-strong); }
+    .board-frame.afterburner { animation: afterburner-frame .72s ease-in-out infinite alternate; }
+    @keyframes afterburner-frame { to { border-color: var(--white); } }
+    .board-frame.multi-impact { animation: impact-shake .48s cubic-bezier(.36,.07,.19,.97); }
+    @keyframes impact-shake {
+      0%, 100% { transform: translateX(0); }
+      18% { transform: translateX(-5px); }
+      36% { transform: translateX(4px); }
+      54% { transform: translateX(-3px); }
+      72% { transform: translateX(2px); }
+    }
+    #board { display: block; width: 100%; height: auto; background: #050505; touch-action: none; }
+    .light #board { background: #f7f6f2; }
+    .board-corner { display: flex; justify-content: space-between; padding: 11px 2px 1px; color: var(--muted-soft); font: 8px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; }
+    .overlay {
+      position: absolute; inset: 10px; display: grid; place-items: center; padding: 24px;
+      background: rgb(0 0 0 / 82%); text-align: center; transition: opacity .18s ease;
+    }
+    .light .overlay { background: rgb(244 243 239 / 90%); }
+    .overlay.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .overlay-inner { max-width: 250px; }
+    .overlay h2 { margin: 0 0 9px; font: 400 31px/1 var(--display); letter-spacing: .13em; text-transform: uppercase; }
+    .overlay p { margin: 0 0 22px; color: var(--muted); font: italic 14px/1.5 var(--text); }
+    .outline-button {
+      min-height: 42px; padding: 0 22px; border: 1px solid #aaa; border-radius: 999px;
+      background: transparent; font: 10px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase;
+      cursor: pointer; transition: color .16s ease, background .16s ease, border-color .16s ease;
+    }
+    .outline-button:hover { color: #000; background: #fff; border-color: #fff; }
+    .light .outline-button:hover { color: #fff; background: #171715; border-color: #171715; }
+    .board-actions { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
+    .skill-shelf { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .skill-button { min-height: 48px; padding: 8px 10px; border: 1px solid var(--line-strong); background: var(--soft); text-align: left; cursor: pointer; }
+    .skill-button:hover:not(:disabled), .skill-button.is-armed { border-color: var(--white); background: var(--raised); }
+    .skill-button:disabled { opacity: .42; cursor: not-allowed; }
+    .skill-name { display: flex; justify-content: space-between; gap: 6px; font: 9px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .skill-hint { display: block; margin-top: 6px; color: var(--muted); font: 8px/1.3 var(--mono); letter-spacing: .08em; }
+    .skill-help { min-height: 27px; margin: 8px 0 0; color: var(--muted); text-align: center; font: italic 12px/1.4 var(--text); }
+    body.skill-aiming #board { cursor: crosshair; }
+    .circle-button {
+      width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line-strong);
+      border-radius: 50%; background: transparent; color: var(--body); cursor: pointer; font: 14px/1 var(--mono);
+    }
+    .circle-button:hover { color: var(--white); border-color: #aaa; }
+    .control-list { margin: 0; padding: 0; list-style: none; }
+    .control-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); color: var(--body); font: 12px/1.2 var(--text); }
+    kbd { min-width: 28px; padding: 5px 7px; border: 1px solid var(--line-strong); color: var(--muted); text-align: center; font: 9px/1 var(--mono); }
+    .side-note { margin-top: 22px; color: var(--muted-soft); font: italic 13px/1.55 var(--text); }
+    .touch-controls { display: none; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+    .touch-controls button { min-height: 44px; border: 1px solid var(--line-strong); background: var(--soft); font: 15px/1 var(--mono); touch-action: manipulation; }
+    .touch-controls button:active { background: var(--raised); }
+    .light .touch-controls button { color: var(--white); }
+    .light .live-mark::before { background: var(--white); }
+    footer { border-top: 1px solid var(--line); margin-top: 46px; padding: 18px 0 24px; }
+    .footer-inner { display: flex; justify-content: space-between; gap: 16px; color: var(--muted-soft); font: 8px/1.5 var(--mono); letter-spacing: .16em; text-transform: uppercase; }
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 36px, 480px); }
+      .topbar { height: 60px; }
+      .top-meta { gap: 12px; font-size: 8px; }
+      .top-meta .edition { display: none; }
+      main { padding-top: 40px; }
+      .intro { margin-bottom: 28px; }
+      .game-layout { grid-template-columns: minmax(0, 1fr) minmax(118px, .72fr); gap: 18px; }
+      .board-column { grid-column: 1; grid-row: 1 / span 2; }
+      .rail { padding-top: 8px; }
+      .rail-left { grid-column: 2; grid-row: 1; }
+      .rail-right { grid-column: 2; grid-row: 2; }
+      .metric { padding: 15px 0 13px; }
+      .metric-value { font-size: 27px; }
+      .metric-caption, .rail-heading, .panel-label { font-size: 8px; }
+      .mini-panel { margin-top: 19px; }
+      .mini-panel canvas { height: 78px; }
+      .control-list li { padding: 9px 0; font-size: 11px; }
+      .side-note { font-size: 12px; }
+      .touch-controls { display: grid; }
+      footer { margin-top: 34px; }
+    }
+    @media (max-width: 430px) {
+      .shell { width: calc(100% - 28px); }
+      .game-layout { grid-template-columns: minmax(0, 1fr) 104px; gap: 12px; }
+      .board-frame { padding: 7px; }
+      .overlay { inset: 7px; }
+      .overlay h2 { font-size: 25px; }
+      .metric-value { font-size: 23px; }
+      .metric-caption { letter-spacing: .1em; }
+      .circle-button { width: 34px; height: 34px; }
+      .footer-inner { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+      .board-frame.afterburner { animation: none; border-color: var(--white); }
+      .board-frame.multi-impact { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="wordmark" aria-label="Bugatti">BUGATTI</div>
+      <div class="top-meta"><span class="edition">Atelier Series · 01</span><button class="theme-button auth-button" id="auth-open" type="button">Sign in</button><button class="theme-button" id="theme-button" type="button" aria-label="Switch to light mode">Light mode</button><span class="live-mark">Arcade</span></div>
+    </header>
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div class="eyebrow">Precision · Patience · Play</div>
+        <h1 id="page-title">The Grid</h1>
+        <p>A study in perfect placement.</p>
+      </section>
+      <section class="game-layout" aria-label="Tetris game">
+        <aside class="rail rail-left" aria-label="Game statistics">
+          <div class="rail-heading"><span>Session</span><span>01</span></div>
+          <div class="metric"><div class="metric-value" id="score">000000</div><div class="metric-caption">Score</div></div>
+          <div class="metric"><div class="metric-value" id="best">000000</div><div class="metric-caption">Personal best</div></div>
+          <div class="metric"><div class="metric-value" id="lines">00</div><div class="metric-caption">Lines cleared</div></div>
+          <div class="metric"><div class="metric-value" id="level">01</div><div class="metric-caption">Level</div></div>
+          <div class="metric"><div class="metric-value" id="chain">00</div><div class="metric-caption">Clear chain</div><div class="chain-state" id="chain-state">Clear on consecutive locks</div></div>
+          <div class="mini-panel"><div class="panel-label"><span>Hold</span><span>C</span></div><canvas id="hold" width="160" height="100" aria-label="Held piece"></canvas></div>
+        </aside>
+
+        <div class="board-column">
+          <div class="board-frame">
+            <canvas id="board" width="300" height="600" aria-label="Tetris board"></canvas>
+            <div class="overlay" id="overlay">
+              <div class="overlay-inner">
+                <div class="eyebrow" id="overlay-kicker">Atelier Series · 01</div>
+                <h2 id="overlay-title">The Grid</h2>
+                <p id="overlay-copy">Make every move count.</p>
+                <button class="outline-button" id="start-button">Begin Session</button>
+              </div>
+            </div>
+            <div class="board-corner"><span>10 × 20 Matrix</span><span id="state-label">Ready</span></div>
+          </div>
+          <div class="board-actions">
+            <button class="circle-button" id="pause-button" aria-label="Pause game" title="Pause / resume">Ⅱ</button>
+            <button class="circle-button" id="restart-button" aria-label="Restart game" title="Restart">↻</button>
+            <button class="circle-button" id="sound-button" aria-label="Toggle sound" title="Toggle sound">♪</button>
+          </div>
+          <div class="skill-shelf" aria-label="Board clearing skills">
+            <button class="skill-button" id="cut-skill" type="button"><span class="skill-name"><span>Vertical Cut</span><span id="cut-charge">01</span></span><span class="skill-hint">SELECT COLUMN · V</span></button>
+            <button class="skill-button" id="bomb-skill" type="button"><span class="skill-name"><span>Bomb Block</span><span id="bomb-charge">01</span></span><span class="skill-hint">SELECT TARGET · B</span></button>
+          </div>
+          <p class="skill-help" id="skill-help">Clear 4 lines to recharge both skills.</p>
+          <div class="touch-controls" aria-label="Touch controls">
+            <button data-action="left" aria-label="Move left">←</button>
+            <button data-action="rotate" aria-label="Rotate">↻</button>
+            <button data-action="down" aria-label="Move down">↓</button>
+            <button data-action="right" aria-label="Move right">→</button>
+            <button data-action="drop" aria-label="Drop piece">⇊</button>
+          </div>
+        </div>
+
+        <aside class="rail rail-right" aria-label="Next piece and controls">
+          <div class="rail-heading"><span>Controls</span><span>02</span></div>
+          <ul class="control-list">
+            <li><span>Move</span><kbd>← →</kbd></li>
+            <li><span>Soft drop</span><kbd>↓</kbd></li>
+            <li><span>Rotate</span><kbd>↑</kbd></li>
+            <li><span>Hard drop</span><kbd>SPACE</kbd></li>
+            <li><span>Hold</span><kbd>C</kbd></li>
+          </ul>
+          <div class="mini-panel"><div class="panel-label"><span>Next piece</span><span>03</span></div><canvas id="next" width="160" height="100" aria-label="Next piece"></canvas></div>
+          <p class="side-note">Clear on three consecutive piece locks to ignite Afterburner: slower gravity and double line points for eight seconds.</p>
+        </aside>
+      </section>
+    </main>
+    <footer><div class="footer-inner"><span>Bugatti · The Grid</span><span>Designed for a moment of focus</span><span>© Atelier Series</span></div></footer>
+  </div>
+  <dialog class="auth-dialog" id="auth-dialog" aria-labelledby="auth-title">
+    <div class="auth-content">
+      <div class="auth-heading">
+        <div><div class="eyebrow">The Grid · Member access</div><h2 id="auth-title">Sign in</h2></div>
+        <button class="auth-close" id="auth-close" type="button" aria-label="Close">×</button>
+      </div>
+      <form class="auth-form" id="auth-form">
+        <label class="auth-field" id="auth-email-field">Email address<input id="auth-email" type="email" autocomplete="email" required></label>
+        <label class="auth-field" id="auth-password-field">Password<input id="auth-password" type="password" autocomplete="current-password" minlength="8" required></label>
+        <label class="auth-field" id="auth-confirm-field" hidden>Confirm password<input id="auth-confirm" type="password" autocomplete="new-password" minlength="8"></label>
+        <button class="outline-button auth-submit" id="auth-submit" type="submit">Sign in</button>
+      </form>
+      <div class="auth-account" id="auth-account" hidden><p id="auth-account-email"></p><button class="outline-button auth-submit" id="auth-signout" type="button">Sign out</button></div>
+      <p class="auth-message" id="auth-message" role="status" aria-live="polite"></p>
+      <div class="auth-links" id="auth-links"><button class="auth-link" id="auth-switch" type="button">Create account</button><button class="auth-link" id="auth-recovery" type="button">Forgot password?</button></div>
+      <p class="auth-setup" id="auth-setup" hidden>Connect your Supabase project by setting SUPABASE_URL and SUPABASE_ANON_KEY in the auth setup script at the bottom of index.html.</p>
+    </div>
+  </dialog>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (() => {
+      const COLS = 10, ROWS = 20, SIZE = 30;
+      const shapes = {
+        I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+        J: [[1,0,0],[1,1,1],[0,0,0]],
+        L: [[0,0,1],[1,1,1],[0,0,0]],
+        O: [[1,1],[1,1]],
+        S: [[0,1,1],[1,1,0],[0,0,0]],
+        T: [[0,1,0],[1,1,1],[0,0,0]],
+        Z: [[1,1,0],[0,1,1],[0,0,0]]
+      };
+      const shades = { I: '#f2f2f2', J: '#c7c7c7', L: '#e0e0e0', O: '#aaaaaa', S: '#dedede', T: '#929292', Z: '#b8b8b8' };
+      const lightShades = { I: '#393936', J: '#77756f', L: '#55534e', O: '#aaa79f', S: '#66645e', T: '#8d8a82', Z: '#45443f' };
+      const boardCanvas = document.getElementById('board'), ctx = boardCanvas.getContext('2d');
+      const nextCanvas = document.getElementById('next'), nextCtx = nextCanvas.getContext('2d');
+      const holdCanvas = document.getElementById('hold'), holdCtx = holdCanvas.getContext('2d');
+      const $ = (id) => document.getElementById(id);
+      let board, bag, current, nextType, held, canHold, score, lines, level, chain = 0, best = 0;
+      let running = false, paused = true, ended = false, clearing = null, fallingBlocks = null, skillEffect = null, pendingSpawn = false;
+      let afterburnerUntil = 0, pauseStartedAt = 0, dropCounter = 0, lastTime = 0, raf = 0, soundOn = false;
+      let skillCharges = { cut: 1, bomb: 1 }, skillProgress = 0, skillMode = null, skillTarget = { x: 5, y: 10 };
+      let repeatDelay = 0, repeatInterval = 0;
+      let audio;
+      try { best = Number(localStorage.getItem('the-grid-best')) || 0; } catch (_) {}
+      try { if (localStorage.getItem('the-grid-theme') === 'light') document.body.classList.add('light'); } catch (_) {}
+
+      function emptyBoard() { return Array.from({ length: ROWS }, () => Array(COLS).fill(null)); }
+      function refillBag() {
+        bag = Object.keys(shapes);
+        for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+      }
+      function takeType() { if (!bag || !bag.length) refillBag(); return bag.pop(); }
+      function makePiece(type) {
+        const matrix = shapes[type].map(row => row.slice());
+        return { type, matrix, x: Math.floor((COLS - matrix[0].length) / 2), y: 0 };
+      }
+      function reset() {
+        cancelAnimationFrame(raf);
+        stopRepeat();
+        board = emptyBoard(); bag = []; held = null; canHold = true; score = 0; lines = 0; level = 1; chain = 0; clearing = null; fallingBlocks = null; skillEffect = null; pendingSpawn = false;
+        afterburnerUntil = 0; skillCharges = { cut: 1, bomb: 1 }; skillProgress = 0; skillMode = null; skillTarget = { x: 5, y: 10 };
+        document.querySelector('.board-frame').classList.remove('multi-impact');
+        current = makePiece(takeType()); nextType = takeType(); dropCounter = 0; lastTime = 0;
+        running = false; paused = true; ended = false;
+        updateStats(); updateRuleState(performance.now()); updateSkills(); draw(); drawPreviews(); showOverlay('Atelier Series · 01', 'The Grid', 'Make every move count.', 'Begin Session');
+        $('state-label').textContent = 'Ready'; $('pause-button').textContent = 'Ⅱ';
+      }
+      function updateStats() {
+        $('score').textContent = String(score).padStart(6, '0');
+        $('best').textContent = String(best).padStart(6, '0');
+        $('lines').textContent = String(lines).padStart(2, '0');
+        $('level').textContent = String(level).padStart(2, '0');
+        $('chain').textContent = String(chain).padStart(2, '0');
+      }
+      function updateRuleState(time) {
+        const active = time < afterburnerUntil;
+        const frame = document.querySelector('.board-frame');
+        frame.classList.toggle('afterburner', active);
+        if (active) {
+          const seconds = Math.ceil((afterburnerUntil - time) / 1000);
+          $('chain-state').textContent = `Afterburner · ${seconds}s · 2× points`;
+          if (running && !paused && !ended) $('state-label').textContent = `Afterburner ${seconds}s`;
+        } else {
+          $('chain-state').textContent = chain ? `${chain} clear ${chain === 1 ? 'turn' : 'turns'} in chain` : 'Clear on consecutive locks';
+          if (running && !paused && !ended) $('state-label').textContent = 'In motion';
+        }
+      }
+      function updateSkills() {
+        const locked = !running || paused || ended || clearing || fallingBlocks || skillEffect;
+        document.body.classList.toggle('skill-aiming', Boolean(skillMode));
+        $('cut-charge').textContent = String(skillCharges.cut).padStart(2, '0');
+        $('bomb-charge').textContent = String(skillCharges.bomb).padStart(2, '0');
+        $('cut-skill').disabled = locked || skillCharges.cut < 1;
+        $('bomb-skill').disabled = locked || skillCharges.bomb < 1;
+        $('cut-skill').classList.toggle('is-armed', skillMode === 'cut');
+        $('bomb-skill').classList.toggle('is-armed', skillMode === 'bomb');
+        if (skillEffect?.type === 'bomb' && skillEffect.phase === 'fuse') $('skill-help').textContent = 'Bomb armed. Clear the blast zone.';
+        else if (skillEffect) $('skill-help').textContent = 'Skill impact. Blocks are settling…';
+        else if (fallingBlocks) $('skill-help').textContent = 'Loose blocks are falling into place…';
+        else if (clearing) $('skill-help').textContent = 'Line cascade in progress…';
+        else if (skillMode === 'cut') $('skill-help').textContent = 'Choose a column to slice through the stack.';
+        else if (skillMode === 'bomb') $('skill-help').textContent = 'Choose a target. The blast clears a 5 × 5 area.';
+        else $('skill-help').textContent = `${4 - skillProgress} line${4 - skillProgress === 1 ? '' : 's'} until both skills recharge.`;
+      }
+      function showOverlay(kicker, title, copy, action) {
+        $('overlay-kicker').textContent = kicker; $('overlay-title').textContent = title;
+        $('overlay-copy').textContent = copy; $('start-button').textContent = action;
+        $('overlay').classList.remove('is-hidden');
+      }
+      function hideOverlay() { $('overlay').classList.add('is-hidden'); }
+      function start() {
+        if (ended) reset();
+        running = true; paused = false; hideOverlay(); $('state-label').textContent = 'In motion';
+        updateSkills(); cancelAnimationFrame(raf); lastTime = 0; raf = requestAnimationFrame(loop);
+      }
+      function pause() {
+        if (!running || ended) return;
+        paused = !paused;
+        if (paused) {
+          skillMode = null; updateSkills();
+          pauseStartedAt = performance.now();
+          cancelAnimationFrame(raf); $('state-label').textContent = 'Paused'; $('pause-button').textContent = '▶';
+          showOverlay('Session paused', 'Take a breath', 'Your position is held.', 'Resume Session');
+        } else {
+          const pausedFor = performance.now() - pauseStartedAt;
+          if (afterburnerUntil > pauseStartedAt) afterburnerUntil += pausedFor;
+          if (clearing) clearing.started += pausedFor;
+          if (fallingBlocks) fallingBlocks.started += pausedFor;
+          if (skillEffect) skillEffect.started += pausedFor;
+          hideOverlay(); $('state-label').textContent = 'In motion'; $('pause-button').textContent = 'Ⅱ'; updateSkills();
+          lastTime = 0; raf = requestAnimationFrame(loop);
+        }
+      }
+      function collide(piece, dx = 0, dy = 0, matrix = piece.matrix) {
+        for (let y = 0; y < matrix.length; y++) for (let x = 0; x < matrix[y].length; x++) {
+          if (!matrix[y][x]) continue;
+          const bx = piece.x + x + dx, by = piece.y + y + dy;
+          if (bx < 0 || bx >= COLS || by >= ROWS) return true;
+          if (by >= 0 && board[by][bx]) return true;
+        }
+        return false;
+      }
+      function merge() {
+        dropCounter = 0;
+        current.matrix.forEach((row, y) => row.forEach((cell, x) => {
+          if (!cell) return;
+          const by = current.y + y, bx = current.x + x;
+          if (by >= 0) board[by][bx] = current.type;
+        }));
+        pendingSpawn = true;
+        const fullRows = findFullRows();
+        if (fullRows.length) beginLineClear(fullRows);
+        else {
+          chain = 0;
+          const falling = settleColumns();
+          if (falling.length) beginFall(falling);
+          else { pendingSpawn = false; spawn(); drawPreviews(); }
+        }
+        updateStats(); updateRuleState(performance.now()); updateSkills();
+        saveBest();
+      }
+      function findFullRows() {
+        const rows = [];
+        for (let y = 0; y < ROWS; y++) if (board[y].every(Boolean)) rows.push(y);
+        return rows;
+      }
+      function beginLineClear(rows) {
+        skillMode = null;
+        const cleared = rows.length;
+        const frame = document.querySelector('.board-frame');
+        frame.classList.remove('multi-impact');
+        if (cleared >= 2) frame.classList.add('multi-impact');
+        const points = [0, 100, 300, 500, 800][cleared] || 0;
+        chain++;
+        if (chain >= 3 && chain % 3 === 0) {
+          const now = performance.now();
+          afterburnerUntil = Math.max(now, afterburnerUntil) + 8000;
+          tone(740, .2); tone(980, .24);
+        }
+        const multiplier = performance.now() < afterburnerUntil ? 2 : 1;
+        const chainBonus = chain > 1 ? 75 * (chain - 1) * level : 0;
+        score += (points * level + chainBonus) * multiplier;
+        lines += cleared; level = Math.floor(lines / 10) + 1;
+        skillProgress += cleared;
+        while (skillProgress >= 4) {
+          skillProgress -= 4;
+          skillCharges.cut = Math.min(3, skillCharges.cut + 1);
+          skillCharges.bomb = Math.min(3, skillCharges.bomb + 1);
+        }
+        tone(520 + cleared * 90, .12 + cleared * .035);
+        if (cleared >= 2) { tone(900 + cleared * 75, .2); tone(1180, .16); }
+        clearing = { rows, count: cleared, started: performance.now(), duration: 460 + (cleared - 1) * 150 };
+        updateStats(); updateRuleState(performance.now()); updateSkills(); saveBest();
+      }
+      function saveBest() {
+        if (score > best) {
+          best = score; try { localStorage.setItem('the-grid-best', String(best)); } catch (_) {}
+          updateStats();
+        }
+      }
+      function finishLineClear() {
+        document.querySelector('.board-frame').classList.remove('multi-impact');
+        const rowsToRemove = new Set(clearing.rows);
+        board = board.filter((_, row) => !rowsToRemove.has(row));
+        while (board.length < ROWS) board.unshift(Array(COLS).fill(null));
+        clearing = null;
+        const falling = settleColumns();
+        if (falling.length) beginFall(falling);
+        else continueAfterDestruction();
+      }
+      function settleColumns() {
+        const settled = emptyBoard(), falling = [];
+        for (let x = 0; x < COLS; x++) {
+          let targetY = ROWS - 1;
+          for (let y = ROWS - 1; y >= 0; y--) {
+            const type = board[y][x];
+            if (!type) continue;
+            settled[targetY][x] = type;
+            if (targetY !== y) falling.push({ type, x, fromY: y, toY: targetY });
+            targetY--;
+          }
+        }
+        board = settled;
+        return falling;
+      }
+      function beginFall(items) {
+        const maxDrop = Math.max(...items.map(item => item.toY - item.fromY));
+        fallingBlocks = { items, started: performance.now(), duration: Math.min(620, 150 + maxDrop * 28) };
+        updateSkills();
+      }
+      function continueAfterDestruction() {
+        const rows = findFullRows();
+        if (rows.length) { beginLineClear(rows); return; }
+        if (!pendingSpawn && current) {
+          let lift = 0;
+          while (collide(current) && lift < ROWS) { current.y--; lift++; }
+          if (collide(current)) { gameOver(); return; }
+        }
+        if (pendingSpawn) {
+          pendingSpawn = false; spawn(); drawPreviews();
+        }
+        updateSkills(); draw();
+      }
+      function finishFalls() {
+        fallingBlocks = null;
+        continueAfterDestruction();
+      }
+      function spawn() {
+        pendingSpawn = false;
+        current = makePiece(nextType); nextType = takeType(); canHold = true;
+        if (collide(current)) gameOver();
+      }
+      function gameOver() {
+        ended = true; running = false; paused = true; cancelAnimationFrame(raf);
+        skillMode = null; updateSkills();
+        document.querySelector('.board-frame').classList.remove('afterburner');
+        $('state-label').textContent = 'Session complete';
+        showOverlay('Session complete', 'Grid complete', 'A new run is waiting.', 'Play Again'); tone(170, .28);
+      }
+      function move(dx, dy) {
+        if (!running || paused || ended || clearing || fallingBlocks || skillEffect) return false;
+        if (!collide(current, dx, dy)) { current.x += dx; current.y += dy; draw(); return true; }
+        if (dy > 0) merge();
+        return false;
+      }
+      function rotate(dir = 1) {
+        if (!running || paused || ended || clearing || fallingBlocks || skillEffect) return;
+        const m = current.matrix, n = m.length;
+        const rotated = Array.from({ length: n }, (_, y) => Array.from({ length: n }, (_, x) => dir > 0 ? m[n - 1 - x][y] : m[x][n - 1 - y]));
+        const kicks = [0, -1, 1, -2, 2];
+        for (const kick of kicks) if (!collide(current, kick, 0, rotated)) { current.x += kick; current.matrix = rotated; tone(360, .035); draw(); return; }
+      }
+      function hardDrop() {
+        if (!running || paused || ended || clearing || fallingBlocks || skillEffect) return;
+        let distance = 0;
+        while (!collide(current, 0, 1)) { current.y++; distance++; }
+        score += distance * 2; tone(220, .07); merge(); updateStats(); draw();
+      }
+      function holdPiece() {
+        if (!running || paused || ended || clearing || fallingBlocks || skillEffect || !canHold) return;
+        const old = held; held = current.type;
+        if (old) current = makePiece(old); else spawn();
+        canHold = false; drawPreviews(); draw(); tone(300, .045);
+      }
+      function armSkill(type) {
+        if (!running || paused || ended || clearing || fallingBlocks || skillEffect || skillCharges[type] < 1) return;
+        skillMode = skillMode === type ? null : type;
+        skillTarget = { x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2) };
+        updateSkills(); draw();
+      }
+      function getBoardCell(clientX, clientY) {
+        const rect = boardCanvas.getBoundingClientRect();
+        return {
+          x: Math.max(0, Math.min(COLS - 1, Math.floor((clientX - rect.left) / rect.width * COLS))),
+          y: Math.max(0, Math.min(ROWS - 1, Math.floor((clientY - rect.top) / rect.height * ROWS)))
+        };
+      }
+      function aimSkill(clientX, clientY) {
+        if (!skillMode) return;
+        skillTarget = getBoardCell(clientX, clientY);
+        draw();
+      }
+      function useSkillAt(x, y) {
+        if (!skillMode || !running || paused || ended || clearing || fallingBlocks || skillEffect || skillCharges[skillMode] < 1) return;
+        const type = skillMode;
+        if (type === 'cut') {
+          const removed = board.reduce((sum, row) => sum + (row[x] ? 1 : 0), 0);
+          if (!removed) { $('skill-help').textContent = 'That column is clear. Choose another.'; return; }
+          for (let row = 0; row < ROWS; row++) board[row][x] = null;
+          score += removed * 15; updateStats(); saveBest();
+          skillEffect = { type, x, y, removed, started: performance.now(), duration: 360 };
+          tone(260, .2); tone(480, .15);
+        } else {
+          let nearby = 0;
+          for (let row = Math.max(0, y - 2); row <= Math.min(ROWS - 1, y + 2); row++) {
+            for (let col = Math.max(0, x - 2); col <= Math.min(COLS - 1, x + 2); col++) if (board[row][col]) nearby++;
+          }
+          if (!nearby) { $('skill-help').textContent = 'No blocks in range. Choose a denser area.'; return; }
+          skillEffect = { type, phase: 'fuse', x, y, removed: 0, started: performance.now(), fuse: 540, duration: 380 };
+          tone(130, .16);
+        }
+        skillCharges[type]--; skillMode = null; updateSkills(); draw();
+      }
+      function detonateBomb(time) {
+        let removed = 0;
+        for (let row = Math.max(0, skillEffect.y - 2); row <= Math.min(ROWS - 1, skillEffect.y + 2); row++) {
+          for (let col = Math.max(0, skillEffect.x - 2); col <= Math.min(COLS - 1, skillEffect.x + 2); col++) {
+            if (board[row][col]) { board[row][col] = null; removed++; }
+          }
+        }
+        skillEffect.phase = 'blast'; skillEffect.removed = removed; skillEffect.started = time;
+        score += removed * 15; updateStats(); saveBest();
+        updateSkills(); tone(90, .32); tone(210, .24);
+      }
+      function finishSkillEffect() {
+        skillEffect = null;
+        const falling = settleColumns();
+        if (falling.length) beginFall(falling);
+        else continueAfterDestruction();
+      }
+      function drawCell(context, x, y, size, type, ghost = false) {
+        const inset = Math.max(1, Math.round(size * .08));
+        const light = document.body.classList.contains('light');
+        context.fillStyle = ghost ? (light ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.11)') : (light ? lightShades[type] : shades[type]);
+        context.fillRect(x * size + inset, y * size + inset, size - inset * 2, size - inset * 2);
+        if (!ghost) {
+          context.fillStyle = light ? 'rgba(255,255,255,.3)' : 'rgba(255,255,255,.17)';
+          context.fillRect(x * size + inset, y * size + inset, size - inset * 2, Math.max(1, size * .045));
+        }
+      }
+      function draw() {
+        const light = document.body.classList.contains('light');
+        ctx.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
+        ctx.fillStyle = light ? '#f7f6f2' : '#050505'; ctx.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
+        ctx.strokeStyle = light ? 'rgba(0,0,0,.09)' : 'rgba(255,255,255,.055)'; ctx.lineWidth = 1;
+        for (let x = 0; x <= COLS; x++) { ctx.beginPath(); ctx.moveTo(x * SIZE + .5, 0); ctx.lineTo(x * SIZE + .5, ROWS * SIZE); ctx.stroke(); }
+        for (let y = 0; y <= ROWS; y++) { ctx.beginPath(); ctx.moveTo(0, y * SIZE + .5); ctx.lineTo(COLS * SIZE, y * SIZE + .5); ctx.stroke(); }
+        const fallingTargets = new Set(fallingBlocks ? fallingBlocks.items.map(item => `${item.x},${item.toY}`) : []);
+        board.forEach((row, y) => row.forEach((type, x) => {
+          if (type && !fallingTargets.has(`${x},${y}`)) drawCell(ctx, x, y, SIZE, type);
+        }));
+        if (fallingBlocks) {
+          const progress = Math.min(1, (performance.now() - fallingBlocks.started) / fallingBlocks.duration);
+          const eased = progress * progress * (3 - 2 * progress);
+          fallingBlocks.items.forEach(item => drawCell(ctx, item.x, item.fromY + (item.toY - item.fromY) * eased, SIZE, item.type));
+        }
+        if (clearing) drawClearEffect(performance.now(), light);
+        if (current && !pendingSpawn) {
+          let ghostY = current.y;
+          while (!collide({ ...current, y: ghostY }, 0, 1)) ghostY++;
+          current.matrix.forEach((row, y) => row.forEach((cell, x) => {
+            if (!cell) return;
+            if (ghostY + y >= 0) drawCell(ctx, current.x + x, ghostY + y, SIZE, current.type, true);
+            if (current.y + y >= 0) drawCell(ctx, current.x + x, current.y + y, SIZE, current.type);
+          }));
+        }
+        if (skillEffect) drawSkillEffect(performance.now(), light);
+        if (skillMode) drawSkillTarget(light);
+      }
+      function drawSkillTarget(light) {
+        const { x, y } = skillTarget;
+        ctx.save();
+        ctx.strokeStyle = light ? '#171715' : '#fff'; ctx.fillStyle = light ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.14)';
+        ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+        if (skillMode === 'cut') {
+          ctx.fillRect(x * SIZE, 0, SIZE, ROWS * SIZE);
+          ctx.beginPath(); ctx.moveTo(x * SIZE + SIZE / 2, 0); ctx.lineTo(x * SIZE + SIZE / 2, ROWS * SIZE); ctx.stroke();
+        } else {
+          const left = Math.max(0, x - 2), top = Math.max(0, y - 2);
+          const right = Math.min(COLS, x + 3), bottom = Math.min(ROWS, y + 3);
+          ctx.fillRect(left * SIZE, top * SIZE, (right - left) * SIZE, (bottom - top) * SIZE);
+          ctx.strokeRect(left * SIZE + 1, top * SIZE + 1, (right - left) * SIZE - 2, (bottom - top) * SIZE - 2);
+          ctx.setLineDash([]); ctx.beginPath(); ctx.arc(x * SIZE + SIZE / 2, y * SIZE + SIZE / 2, 7, 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.restore();
+      }
+      function drawSkillEffect(time, light) {
+        const effect = skillEffect, cx = effect.x * SIZE + SIZE / 2, cy = effect.y * SIZE + SIZE / 2;
+        ctx.save();
+        if (effect.type === 'cut') {
+          const progress = Math.min(1, (time - effect.started) / effect.duration);
+          const alpha = Math.sin(progress * Math.PI);
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = light ? '#252522' : '#fff'; ctx.fillRect(effect.x * SIZE + 8, 0, SIZE - 16, ROWS * SIZE);
+          for (let i = 0; i < 34; i++) {
+            const y = (i * 83 + progress * 680) % (ROWS * SIZE);
+            ctx.fillRect(effect.x * SIZE + (i % 2 ? 5 : 22), y, 3, 7);
+          }
+        } else if (effect.phase === 'fuse') {
+          const pulse = .65 + Math.sin((time - effect.started) / 55) * .25;
+          ctx.globalAlpha = pulse; ctx.fillStyle = light ? '#242421' : '#fff';
+          ctx.fillRect(effect.x * SIZE + 6, effect.y * SIZE + 6, SIZE - 12, SIZE - 12);
+          ctx.globalAlpha = 1; ctx.strokeStyle = light ? '#171715' : '#fff'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(cx, cy, SIZE * (.48 + .12 * Math.sin((time - effect.started) / 70)), 0, Math.PI * 2); ctx.stroke();
+        } else {
+          const progress = Math.min(1, (time - effect.started) / effect.duration);
+          const radius = 18 + progress * SIZE * 3.1;
+          const glow = ctx.createRadialGradient(cx, cy, 2, cx, cy, radius);
+          glow.addColorStop(0, light ? 'rgba(20,20,18,.86)' : 'rgba(255,255,255,.95)');
+          glow.addColorStop(.42, light ? 'rgba(40,40,36,.48)' : 'rgba(255,255,255,.58)');
+          glow.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.globalAlpha = 1 - progress * .35; ctx.fillStyle = glow; ctx.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
+          ctx.globalAlpha = 1 - progress; ctx.strokeStyle = light ? '#171715' : '#fff'; ctx.lineWidth = 3;
+          for (let ring = 0; ring < 3; ring++) {
+            ctx.beginPath(); ctx.arc(cx, cy, radius * (.45 + ring * .24), 0, Math.PI * 2); ctx.stroke();
+          }
+          for (let i = 0; i < 30; i++) {
+            const angle = i * Math.PI * 2 / 30, travel = progress * (50 + (i % 5) * 14);
+            ctx.fillRect(cx + Math.cos(angle) * travel, cy + Math.sin(angle) * travel, 3, 3);
+          }
+        }
+        ctx.restore();
+      }
+      function drawClearEffect(time, light) {
+        const progress = Math.min(1, (time - clearing.started) / clearing.duration);
+        const count = clearing.count;
+        if (count >= 2) {
+          const centerY = clearing.rows.reduce((sum, row) => sum + row * SIZE + SIZE / 2, 0) / count;
+          const burst = ctx.createRadialGradient(150, centerY, 8, 150, centerY, 360);
+          burst.addColorStop(0, light ? 'rgba(25,25,23,.32)' : 'rgba(255,255,255,.42)');
+          burst.addColorStop(.55, light ? 'rgba(25,25,23,.11)' : 'rgba(255,255,255,.15)');
+          burst.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.globalAlpha = Math.sin(progress * Math.PI) * Math.min(1, .45 + count * .14);
+          ctx.fillStyle = burst; ctx.fillRect(0, 0, boardCanvas.width, boardCanvas.height); ctx.globalAlpha = 1;
+        }
+        clearing.rows.forEach((row, index) => {
+          const y = row * SIZE;
+          const pulse = Math.sin(progress * Math.PI);
+          ctx.fillStyle = light ? `rgba(255,255,255,${.16 + pulse * .62})` : `rgba(255,255,255,${.2 + pulse * .72})`;
+          ctx.fillRect(0, y + 1, COLS * SIZE, SIZE - 2);
+          const waves = count >= 2 ? 3 : 1;
+          for (let wave = 0; wave < waves; wave++) {
+            const sweepX = -90 + progress * 480 + wave * (count >= 3 ? 108 : 72);
+            const halfWidth = count >= 3 ? 100 : count === 2 ? 84 : 75;
+            const glow = ctx.createLinearGradient(sweepX - halfWidth, 0, sweepX + halfWidth, 0);
+            glow.addColorStop(0, 'rgba(255,255,255,0)');
+            glow.addColorStop(.5, light ? 'rgba(38,38,36,.92)' : 'rgba(255,255,255,.98)');
+            glow.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = glow; ctx.fillRect(0, y + 1, COLS * SIZE, SIZE - 2);
+          }
+          const particleCount = 14 + count * 9;
+          for (let i = 0; i < particleCount; i++) {
+            const seed = (i * 67 + index * 31) % 300;
+            const x = (seed + progress * (340 + (i % 4) * 95)) % 300;
+            const py = y + 3 + ((i * 13 + Math.floor(progress * 11 * (i % 3 + 1))) % 25);
+            ctx.globalAlpha = Math.max(0, 1 - progress) * (light ? .7 : .95);
+            ctx.fillStyle = light ? '#292825' : '#fff';
+            ctx.fillRect(x, py, i % 4 === 0 ? 5 : 2, i % 4 === 0 ? 1 : 2);
+          }
+          ctx.globalAlpha = 1;
+        });
+      }
+      function drawMini(context, canvas, type) {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        if (!type) return;
+        const matrix = shapes[type], size = 20;
+        const width = matrix[0].length * size, height = matrix.length * size;
+        const ox = Math.round((canvas.width - width) / 2), oy = Math.round((canvas.height - height) / 2);
+        matrix.forEach((row, y) => row.forEach((v, x) => {
+          if (!v) return;
+          const light = document.body.classList.contains('light');
+          context.fillStyle = light ? lightShades[type] : shades[type]; context.fillRect(ox + x * size + 1, oy + y * size + 1, size - 2, size - 2);
+          context.fillStyle = 'rgba(255,255,255,.16)'; context.fillRect(ox + x * size + 1, oy + y * size + 1, size - 2, 1);
+        }));
+      }
+      function drawPreviews() { drawMini(nextCtx, nextCanvas, nextType); drawMini(holdCtx, holdCanvas, held); }
+      function getGravityInterval(time) {
+        const base = Math.max(100, 900 * Math.pow(.82, level - 1));
+        return time < afterburnerUntil ? base * 1.65 : base;
+      }
+      function loop(time = 0) {
+        if (!running || paused || ended) return;
+        if (skillEffect) {
+          lastTime = time;
+          if (skillEffect.type === 'bomb' && skillEffect.phase === 'fuse' && time - skillEffect.started >= skillEffect.fuse) detonateBomb(time);
+          else if (skillEffect.phase !== 'fuse' && time - skillEffect.started >= skillEffect.duration) finishSkillEffect();
+          updateRuleState(time); draw(); raf = requestAnimationFrame(loop); return;
+        }
+        if (clearing) {
+          lastTime = time;
+          updateRuleState(time);
+          if (time - clearing.started >= clearing.duration) finishLineClear();
+          draw(); raf = requestAnimationFrame(loop); return;
+        }
+        if (fallingBlocks) {
+          lastTime = time;
+          updateRuleState(time);
+          if (time - fallingBlocks.started >= fallingBlocks.duration) finishFalls();
+          draw(); raf = requestAnimationFrame(loop); return;
+        }
+        const delta = lastTime ? time - lastTime : 0; lastTime = time; dropCounter += delta;
+        const gravityInterval = getGravityInterval(time);
+        updateRuleState(time);
+        if (dropCounter >= gravityInterval) { move(0, 1); dropCounter = 0; }
+        draw(); raf = requestAnimationFrame(loop);
+      }
+      function tone(freq, duration) {
+        if (!soundOn) return;
+        try {
+          audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+          if (audio.state === 'suspended') audio.resume();
+          const osc = audio.createOscillator(), gain = audio.createGain();
+          osc.type = 'sine'; osc.frequency.value = freq; gain.gain.setValueAtTime(.035, audio.currentTime);
+          gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + duration);
+          osc.connect(gain); gain.connect(audio.destination); osc.start(); osc.stop(audio.currentTime + duration);
+        } catch (_) {}
+      }
+      function action(name) {
+        if (name === 'left') move(-1, 0);
+        if (name === 'right') move(1, 0);
+        if (name === 'down') { if (move(0, 1)) { score++; updateStats(); } }
+        if (name === 'rotate') rotate(1);
+        if (name === 'drop') hardDrop();
+      }
+      function startRepeat(name, key) {
+        stopRepeat(); repeatKey = key; action(name);
+        repeatDelay = window.setTimeout(() => {
+          repeatInterval = window.setInterval(() => action(name), 62);
+        }, 175);
+      }
+      function stopRepeat(key) {
+        if (key && repeatKey && key !== repeatKey) return;
+        window.clearTimeout(repeatDelay); window.clearInterval(repeatInterval);
+        repeatDelay = 0; repeatInterval = 0; repeatKey = null;
+      }
+      function updateThemeButton() {
+        const light = document.body.classList.contains('light');
+        $('theme-button').textContent = light ? 'Dark mode' : 'Light mode';
+        $('theme-button').setAttribute('aria-label', light ? 'Switch to dark mode' : 'Switch to light mode');
+        document.querySelector('meta[name="theme-color"]').content = light ? '#f4f3ef' : '#000000';
+      }
+      let repeatKey = null;
+      document.addEventListener('keydown', (event) => {
+        if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, button, dialog')) return;
+        const key = event.key.toLowerCase();
+        if (['arrowleft','arrowright','arrowdown','arrowup',' ','x','z','c','p','v','b','enter'].includes(key)) event.preventDefault();
+        if (key === 'enter' && (!running || paused || ended)) { if (paused && running && !ended) pause(); else start(); return; }
+        if (key === 'escape' && skillMode) { skillMode = null; updateSkills(); draw(); return; }
+        if (key === 'p' || key === 'escape') { pause(); return; }
+        if (!running || paused || ended) return;
+        if (key === 'v') { if (!event.repeat) armSkill('cut'); return; }
+        if (key === 'b') { if (!event.repeat) armSkill('bomb'); return; }
+        const direction = { arrowleft: 'left', arrowright: 'right', arrowdown: 'down', a: 'left', d: 'right', s: 'down' }[key];
+        if (direction) { if (!event.repeat) startRepeat(direction, key); return; }
+        if (key === 'arrowup' || key === 'x') { if (!event.repeat) rotate(1); }
+        if (key === 'z') { if (!event.repeat) rotate(-1); }
+        if (key === ' ') { if (!event.repeat) hardDrop(); }
+        if (key === 'c' || key === 'shift') { if (!event.repeat) holdPiece(); }
+      });
+      document.addEventListener('keyup', event => stopRepeat(event.key.toLowerCase()));
+      window.addEventListener('blur', () => stopRepeat());
+      $('start-button').addEventListener('click', () => { if (running && paused && !ended) pause(); else start(); });
+      $('pause-button').addEventListener('click', () => { if (!running && !ended) start(); else pause(); });
+      $('restart-button').addEventListener('click', reset);
+      $('cut-skill').addEventListener('click', () => armSkill('cut'));
+      $('bomb-skill').addEventListener('click', () => armSkill('bomb'));
+      $('sound-button').addEventListener('click', () => {
+        soundOn = !soundOn; $('sound-button').textContent = soundOn ? '♫' : '♪';
+        $('sound-button').setAttribute('aria-label', soundOn ? 'Turn sound off' : 'Turn sound on'); tone(440, .08);
+      });
+      $('theme-button').addEventListener('click', () => {
+        document.body.classList.toggle('light');
+        try { localStorage.setItem('the-grid-theme', document.body.classList.contains('light') ? 'light' : 'dark'); } catch (_) {}
+        updateThemeButton(); draw(); drawPreviews();
+      });
+      updateThemeButton();
+      document.querySelectorAll('.touch-controls button').forEach(button => {
+        button.addEventListener('pointerdown', (event) => {
+          event.preventDefault();
+          const name = button.dataset.action;
+          if (name === 'left' || name === 'right' || name === 'down') startRepeat(name, 'pointer');
+          else action(name);
+        });
+      });
+      window.addEventListener('pointerup', () => stopRepeat('pointer'));
+      window.addEventListener('pointercancel', () => stopRepeat('pointer'));
+      let swipeX = 0, swipeY = 0;
+      boardCanvas.addEventListener('pointermove', event => aimSkill(event.clientX, event.clientY));
+      boardCanvas.addEventListener('pointerdown', event => { swipeX = event.clientX; swipeY = event.clientY; boardCanvas.setPointerCapture(event.pointerId); });
+      boardCanvas.addEventListener('pointerup', event => {
+        if (!running || paused) return;
+        if (skillMode) {
+          const { x, y } = getBoardCell(event.clientX, event.clientY);
+          skillTarget = { x, y }; useSkillAt(x, y); return;
+        }
+        const dx = event.clientX - swipeX, dy = event.clientY - swipeY;
+        if (Math.abs(dx) > 24) action(dx < 0 ? 'left' : 'right');
+        if (dy > 35) action('drop'); else if (dy < -25 || (Math.abs(dx) < 24 && Math.abs(dy) < 24)) action('rotate');
+      });
+      reset();
+    })();
+  </script>
+  <script>
+    (() => {
+      // Supabase Dashboard → Project Settings → API. Use the publishable/anon key here;
+      // never put a service_role or secret key in browser code.
+      const SUPABASE_URL = 'https://hirdnejtjjljasuvbnrc.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpcmRuZWp0ampsamFzdXZibnJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwMzg3MDIsImV4cCI6MjEwODYxNDcwMn0.mXnIdsABxz9F5AVNyILr4GCze-5pD88Dy4oQ4mUzKEY';
+      const dialog = document.getElementById('auth-dialog');
+      const form = document.getElementById('auth-form');
+      const email = document.getElementById('auth-email');
+      const password = document.getElementById('auth-password');
+      const confirmPassword = document.getElementById('auth-confirm');
+      const message = document.getElementById('auth-message');
+      const title = document.getElementById('auth-title');
+      const submit = document.getElementById('auth-submit');
+      const emailField = document.getElementById('auth-email-field');
+      const passwordField = document.getElementById('auth-password-field');
+      const confirmField = document.getElementById('auth-confirm-field');
+      const links = document.getElementById('auth-links');
+      const account = document.getElementById('auth-account');
+      const setup = document.getElementById('auth-setup');
+      let mode = 'signin';
+      let client = null;
+      let currentUser = null;
+      let recoveryActive = false;
+
+      function configured() {
+        return SUPABASE_URL.startsWith('https://') && !SUPABASE_URL.includes('YOUR_') &&
+          SUPABASE_ANON_KEY.length > 20 && !SUPABASE_ANON_KEY.includes('YOUR_');
+      }
+      function getClient() {
+        if (!configured()) return null;
+        if (!window.supabase?.createClient) return null;
+        if (!client) client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return client;
+      }
+      function setMessage(text = '', kind = '') {
+        message.textContent = text;
+        message.dataset.kind = kind;
+      }
+      function setMode(nextMode) {
+        mode = nextMode;
+        const labels = {
+          signin: ['Sign in', 'Sign in', 'Create account'],
+          signup: ['Create account', 'Create account', 'I already have an account'],
+          recovery: ['Reset password', 'Send reset link', 'Back to sign in'],
+          update: ['Choose a new password', 'Update password', '']
+        }[mode];
+        title.textContent = labels[0];
+        submit.textContent = labels[1];
+        document.getElementById('auth-switch').textContent = labels[2];
+        emailField.hidden = mode === 'update';
+        email.required = mode !== 'update';
+        passwordField.hidden = mode === 'recovery';
+        password.required = mode !== 'recovery';
+        password.autocomplete = mode === 'signin' ? 'current-password' : 'new-password';
+        confirmField.hidden = mode !== 'signup';
+        confirmPassword.required = mode === 'signup';
+        links.hidden = mode === 'update';
+        document.getElementById('auth-recovery').hidden = mode !== 'signin';
+        setMessage('');
+      }
+      function updateAccount(user) {
+        currentUser = user || null;
+        const trigger = document.getElementById('auth-open');
+        trigger.textContent = currentUser ? 'Account' : 'Sign in';
+        trigger.setAttribute('aria-label', currentUser ? `Signed in as ${currentUser.email}` : 'Sign in');
+        document.getElementById('auth-account-email').textContent = currentUser ? `Signed in as ${currentUser.email}` : '';
+        account.hidden = !currentUser;
+        form.hidden = Boolean(currentUser);
+        links.hidden = Boolean(currentUser) || mode === 'update';
+        if (currentUser) title.textContent = 'Account';
+      }
+      function openDialog() {
+        setMode('signin');
+        updateAccount(currentUser);
+        setup.hidden = configured();
+        if (!configured()) setMessage('Supabase is not connected yet. Add your project URL and publishable key to the setup script below.', 'error');
+        else if (!window.supabase?.createClient) setMessage('Supabase could not load. Check your internet connection and reload.', 'error');
+        if (!dialog.open) dialog.showModal();
+        if (!currentUser) email.focus();
+      }
+
+      document.getElementById('auth-open').addEventListener('click', openDialog);
+      document.getElementById('auth-close').addEventListener('click', () => dialog.close());
+      dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+      document.getElementById('auth-switch').addEventListener('click', () => setMode(mode === 'signup' ? 'signin' : mode === 'update' ? 'signin' : 'signup'));
+      document.getElementById('auth-recovery').addEventListener('click', () => setMode('recovery'));
+
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const supabase = getClient();
+        if (!supabase) {
+          setMessage(configured() ? 'Supabase library is unavailable. Reload the page and try again.' : 'Add your Supabase project URL and publishable key in the setup script first.', 'error');
+          setup.hidden = configured();
+          return;
+        }
+        if (mode === 'signup' && password.value !== confirmPassword.value) {
+          setMessage('Passwords do not match.', 'error'); confirmPassword.focus(); return;
+        }
+        submit.disabled = true;
+        setMessage('Please wait…');
+        try {
+          let result;
+          if (mode === 'signin') result = await supabase.auth.signInWithPassword({ email: email.value.trim(), password: password.value });
+          else if (mode === 'signup') result = await supabase.auth.signUp({ email: email.value.trim(), password: password.value, options: { emailRedirectTo: window.location.href.split('#')[0] } });
+          else if (mode === 'recovery') result = await supabase.auth.resetPasswordForEmail(email.value.trim(), { redirectTo: window.location.href.split('#')[0] });
+          else result = await supabase.auth.updateUser({ password: password.value });
+
+          if (result.error) throw result.error;
+          if (mode === 'signup' && !result.data?.session) {
+            password.value = '';
+            confirmPassword.value = '';
+            setMode('signin');
+            setMessage('Email confirmation is still enabled. Turn off Confirm email in Supabase: Authentication > Sign In / Providers > Email.', 'error');
+          } else if (mode === 'recovery') {
+            setMessage('If an account uses this email, a password reset link is on its way.', 'success');
+          } else if (mode === 'update') {
+            password.value = '';
+            recoveryActive = false;
+            setMode('signin');
+            setMessage('Password updated successfully.', 'success');
+          } else {
+            updateAccount(result.data?.user || result.data?.session?.user);
+            setMessage('You are signed in.', 'success');
+            setTimeout(() => dialog.close(), 700);
+          }
+        } catch (error) {
+          setMessage(error.message || 'Something went wrong. Please try again.', 'error');
+        } finally {
+          submit.disabled = false;
+        }
+      });
+      document.getElementById('auth-signout').addEventListener('click', async () => {
+        const supabase = getClient();
+        if (!supabase) return;
+        const { error } = await supabase.auth.signOut();
+        if (error) setMessage(error.message, 'error');
+        else { updateAccount(null); setMode('signin'); setMessage('You are signed out.', 'success'); }
+      });
+
+      const supabase = getClient();
+      if (supabase) {
+        supabase.auth.getSession().then(({ data, error }) => {
+          if (!error && !recoveryActive) updateAccount(data.session?.user);
+        });
+        supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'PASSWORD_RECOVERY') {
+            recoveryActive = true;
+            updateAccount(null);
+            setMode('update');
+            form.hidden = false;
+            account.hidden = true;
+            if (!dialog.open) dialog.showModal();
+            setMessage('Choose a new password for your account.');
+          } else updateAccount(session?.user);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
